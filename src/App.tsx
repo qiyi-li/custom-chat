@@ -1,16 +1,13 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchModels, sendChatCompletion } from './api';
+import { ChatHeader } from './components/ChatHeader';
+import { MessageComposer } from './components/MessageComposer';
+import { MessageList } from './components/MessageList';
+import { Sidebar } from './components/Sidebar';
+import { useAutoDismissNotice } from './hooks/useAutoDismissNotice';
 import { createConversation, getConversationTitle, loadState, saveState } from './storage';
-import type { ChatMessage, Conversation, ModelInfo, PersistedState } from './types';
-
-function createMessage(role: ChatMessage['role'], content: string): ChatMessage {
-  return {
-    id: crypto.randomUUID(),
-    role,
-    content,
-    createdAt: Date.now(),
-  };
-}
+import type { Conversation, ModelInfo, PersistedState } from './types';
+import { createMessage } from './utils/messages';
 
 function App() {
   const [state, setState] = useState<PersistedState>(() => loadState());
@@ -29,6 +26,9 @@ function App() {
     [state.activeConversationId, state.conversations],
   );
 
+  const clearNotice = useCallback(() => setNotice(''), []);
+  useAutoDismissNotice(notice, clearNotice);
+
   useEffect(() => {
     saveState(state);
   }, [state]);
@@ -40,15 +40,6 @@ function App() {
   useEffect(() => {
     void loadModels(false);
   }, []);
-
-  useEffect(() => {
-    if (!notice) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => setNotice(''), 3000);
-    return () => window.clearTimeout(timer);
-  }, [notice]);
 
   async function loadModels(showSuccess = true) {
     setIsLoadingModels(true);
@@ -95,6 +86,10 @@ function App() {
     const nextConversations = state.conversations.filter((conversation) => conversation.id !== conversationId);
     const nextActiveId = state.activeConversationId === conversationId ? nextConversations[0]?.id ?? null : state.activeConversationId;
     updateStateWithConversations(nextConversations, nextActiveId);
+  }
+
+  function handleSelectConversation(conversationId: string) {
+    setState((current) => ({ ...current, activeConversationId: conversationId }));
   }
 
   function startEditingConversation(conversation: Conversation) {
@@ -195,168 +190,47 @@ function App() {
 
   return (
     <main className={`app-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <aside className="sidebar">
-        <div className="brand-row">
-          <div className="brand">
-            <span className="brand-mark">W</span>
-            <div className="brand-text">
-              <strong>Web Chat</strong>
-              <small>本地历史记录</small>
-            </div>
-          </div>
-        </div>
-
-        <button className="primary-button new-chat-button" onClick={handleNewConversation}>新建对话</button>
-
-        <div className="history-list">
-          {state.conversations.length === 0 && <p className="empty-tip">暂无历史对话</p>}
-          {state.conversations.map((conversation) => {
-            const isEditing = editingConversationId === conversation.id;
-
-            return (
-              <div
-                className={`history-item ${conversation.id === state.activeConversationId ? 'active' : ''} ${isEditing ? 'editing' : ''}`}
-                key={conversation.id}
-                onClick={() => {
-                  if (!isEditing) {
-                    setState((current) => ({ ...current, activeConversationId: conversation.id }));
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-              >
-                {isEditing ? (
-                  <input
-                    autoFocus
-                    className="history-title-input"
-                    value={editingTitle}
-                    onBlur={saveConversationTitle}
-                    onChange={(event) => setEditingTitle(event.target.value)}
-                    onClick={(event) => event.stopPropagation()}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault();
-                        saveConversationTitle();
-                      }
-
-                      if (event.key === 'Escape') {
-                        event.preventDefault();
-                        cancelConversationTitleEdit();
-                      }
-                    }}
-                  />
-                ) : (
-                  <>
-                    <span onDoubleClick={(event) => {
-                      event.stopPropagation();
-                      startEditingConversation(conversation);
-                    }}>
-                      {conversation.title}
-                    </span>
-                    <small>{conversation.model || '未选择模型'}</small>
-                    <button
-                      aria-label="编辑对话名称"
-                      className="history-action edit-action"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        startEditingConversation(conversation);
-                      }}
-                      type="button"
-                    >
-                      ✎
-                    </button>
-                    <button
-                      aria-label="删除对话"
-                      className="history-action delete-action"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleDeleteConversation(conversation.id);
-                      }}
-                      type="button"
-                    >
-                      ×
-                    </button>
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <button
-          className="icon-button sidebar-toggle"
-          aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
-          onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
-          type="button"
-        >
-          {isSidebarCollapsed ? '›' : '‹'}
-        </button>
-      </aside>
+      <Sidebar
+        conversations={state.conversations}
+        activeConversationId={state.activeConversationId}
+        editingConversationId={editingConversationId}
+        editingTitle={editingTitle}
+        isCollapsed={isSidebarCollapsed}
+        onCancelEdit={cancelConversationTitleEdit}
+        onCreateConversation={handleNewConversation}
+        onDeleteConversation={handleDeleteConversation}
+        onEditTitleChange={setEditingTitle}
+        onSaveTitle={saveConversationTitle}
+        onSelectConversation={handleSelectConversation}
+        onStartEdit={startEditingConversation}
+        onToggleCollapse={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+      />
 
       <section className="chat-panel">
-        <header className="topbar">
-          <div>
-            <h1>{activeConversation?.title ?? '开始新的对话'}</h1>
-            <p>服务商和 API Key 已由 Cloudflare Worker 托管，选择模型即可对话</p>
-          </div>
-          <div className="model-controls">
-            <select value={state.config.selectedModel} onChange={(event) => handleModelChange(event.target.value)}>
-              <option value="">选择模型</option>
-              {models.map((model) => (
-                <option key={model.id} value={model.id}>{model.id}</option>
-              ))}
-            </select>
-            <button className="ghost-button compact" disabled={isLoadingModels} onClick={() => void loadModels()}>
-              {isLoadingModels ? '加载中' : '刷新模型'}
-            </button>
-          </div>
-        </header>
+        <ChatHeader
+          title={activeConversation?.title ?? '开始新的对话'}
+          models={models}
+          selectedModel={state.config.selectedModel}
+          isLoadingModels={isLoadingModels}
+          onModelChange={handleModelChange}
+          onRefreshModels={() => void loadModels()}
+        />
 
         {notice && <div className="notice">{notice}</div>}
 
-        <div className="messages">
-          {!activeConversation?.messages.length && (
-            <div className="welcome-card">
-              <h2>开始聊天</h2>
-              <p>服务配置由 Cloudflare Worker 托管，模型选择和全部对话历史会保存在当前浏览器本地。</p>
-            </div>
-          )}
+        <MessageList
+          messages={activeConversation?.messages ?? []}
+          isSending={isSending}
+          messagesEndRef={messagesEndRef}
+        />
 
-          {activeConversation?.messages.map((message) => (
-            <article className={`message ${message.role}`} key={message.id}>
-              <div className="avatar">{message.role === 'user' ? '你' : 'AI'}</div>
-              <div className="bubble">{message.content}</div>
-            </article>
-          ))}
-
-          {isSending && (
-            <article className="message assistant">
-              <div className="avatar">AI</div>
-              <div className="bubble typing">正在思考...</div>
-            </article>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        <form className="composer" onSubmit={handleSend}>
-          <textarea
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            onKeyDown={(event) => {
-              if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-            placeholder="输入消息，Ctrl/Cmd + Enter 发送"
-            rows={3}
-          />
-          <button className="primary-button send-button" disabled={isSending || !draft.trim()} type="submit">
-            {isSending ? '发送中' : '发送'}
-          </button>
-        </form>
+        <MessageComposer
+          draft={draft}
+          isSending={isSending}
+          onDraftChange={setDraft}
+          onSubmit={handleSend}
+        />
       </section>
-
     </main>
   );
 }

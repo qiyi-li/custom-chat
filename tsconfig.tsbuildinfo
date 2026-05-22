@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/storage.ts","./src/types.ts","./src/vite-env.d.ts"],"version":"6.0.3"}
+{"root":["./src/app.tsx","./src/api.ts","./src/contextbudget.ts","./src/main.tsx","./src/storage.ts","./src/types.ts","./src/vite-env.d.ts","./src/components/chatheader.tsx","./src/components/messagecomposer.tsx","./src/components/messagelist.tsx","./src/components/sidebar.tsx","./src/hooks/useautodismissnotice.ts","./src/utils/messages.ts"],"version":"6.0.3"}

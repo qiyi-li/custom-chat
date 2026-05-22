@@ -1,3 +1,4 @@
+import { buildBudgetedMessages } from './contextBudget';
 import type { ChatMessage, ModelInfo } from './types';
 
 interface ModelListResponse {
@@ -55,7 +56,7 @@ export async function sendChatCompletion(options: {
     },
     body: JSON.stringify({
       model: options.model,
-      messages: options.messages.map(({ role, content }) => ({ role, content })),
+      messages: buildBudgetedMessages(options.messages).map(({ role, content }) => ({ role, content })),
       temperature: 0.7,
     }),
   });
