@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { API_BASE_URL, fetchModels, sendChatCompletion } from './api';
+import { fetchModels, sendChatCompletion } from './api';
 import { createConversation, getConversationTitle, loadState, saveState } from './storage';
 import type { ChatMessage, Conversation, ModelInfo, PersistedState } from './types';
 
@@ -16,7 +16,9 @@ function App() {
   const [state, setState] = useState<PersistedState>(() => loadState());
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [draft, setDraft] = useState('');
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [notice, setNotice] = useState('');
@@ -38,6 +40,15 @@ function App() {
   useEffect(() => {
     void loadModels(false);
   }, []);
+
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setNotice(''), 3000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   async function loadModels(showSuccess = true) {
     setIsLoadingModels(true);
@@ -84,6 +95,34 @@ function App() {
     const nextConversations = state.conversations.filter((conversation) => conversation.id !== conversationId);
     const nextActiveId = state.activeConversationId === conversationId ? nextConversations[0]?.id ?? null : state.activeConversationId;
     updateStateWithConversations(nextConversations, nextActiveId);
+  }
+
+  function startEditingConversation(conversation: Conversation) {
+    setEditingConversationId(conversation.id);
+    setEditingTitle(conversation.title);
+  }
+
+  function saveConversationTitle() {
+    const title = editingTitle.trim();
+    if (!editingConversationId) {
+      return;
+    }
+
+    setState((current) => ({
+      ...current,
+      conversations: current.conversations.map((conversation) =>
+        conversation.id === editingConversationId
+          ? { ...conversation, title: title || '新对话', updatedAt: Date.now() }
+          : conversation,
+      ),
+    }));
+    setEditingConversationId(null);
+    setEditingTitle('');
+  }
+
+  function cancelConversationTitleEdit() {
+    setEditingConversationId(null);
+    setEditingTitle('');
   }
 
   function handleModelChange(model: string) {
@@ -155,45 +194,102 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">W</span>
-          <div>
-            <strong>Web Chat</strong>
-            <small>本地历史记录</small>
+        <div className="brand-row">
+          <div className="brand">
+            <span className="brand-mark">W</span>
+            <div className="brand-text">
+              <strong>Web Chat</strong>
+              <small>本地历史记录</small>
+            </div>
           </div>
         </div>
 
-        <button className="primary-button" onClick={handleNewConversation}>新建对话</button>
+        <button className="primary-button new-chat-button" onClick={handleNewConversation}>新建对话</button>
 
         <div className="history-list">
           {state.conversations.length === 0 && <p className="empty-tip">暂无历史对话</p>}
-          {state.conversations.map((conversation) => (
-            <button
-              className={`history-item ${conversation.id === state.activeConversationId ? 'active' : ''}`}
-              key={conversation.id}
-              onClick={() => setState((current) => ({ ...current, activeConversationId: conversation.id }))}
-            >
-              <span>{conversation.title}</span>
-              <small>{conversation.model || '未选择模型'}</small>
-              <b
-                aria-label="删除对话"
+          {state.conversations.map((conversation) => {
+            const isEditing = editingConversationId === conversation.id;
+
+            return (
+              <div
+                className={`history-item ${conversation.id === state.activeConversationId ? 'active' : ''} ${isEditing ? 'editing' : ''}`}
+                key={conversation.id}
+                onClick={() => {
+                  if (!isEditing) {
+                    setState((current) => ({ ...current, activeConversationId: conversation.id }));
+                  }
+                }}
                 role="button"
                 tabIndex={0}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleDeleteConversation(conversation.id);
-                }}
               >
-                ×
-              </b>
-            </button>
-          ))}
+                {isEditing ? (
+                  <input
+                    autoFocus
+                    className="history-title-input"
+                    value={editingTitle}
+                    onBlur={saveConversationTitle}
+                    onChange={(event) => setEditingTitle(event.target.value)}
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        saveConversationTitle();
+                      }
+
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        cancelConversationTitleEdit();
+                      }
+                    }}
+                  />
+                ) : (
+                  <>
+                    <span onDoubleClick={(event) => {
+                      event.stopPropagation();
+                      startEditingConversation(conversation);
+                    }}>
+                      {conversation.title}
+                    </span>
+                    <small>{conversation.model || '未选择模型'}</small>
+                    <button
+                      aria-label="编辑对话名称"
+                      className="history-action edit-action"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        startEditingConversation(conversation);
+                      }}
+                      type="button"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      aria-label="删除对话"
+                      className="history-action delete-action"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDeleteConversation(conversation.id);
+                      }}
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        <button className="ghost-button" onClick={() => setIsConfigOpen(true)}>
-          查看服务配置
+        <button
+          className="icon-button sidebar-toggle"
+          aria-label={isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+          onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+          type="button"
+        >
+          {isSidebarCollapsed ? '›' : '‹'}
         </button>
       </aside>
 
@@ -246,30 +342,21 @@ function App() {
           <textarea
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="输入消息，Enter 换行，点击发送提交"
+            onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder="输入消息，Ctrl/Cmd + Enter 发送"
             rows={3}
           />
-          <button className="primary-button" disabled={isSending || !draft.trim()} type="submit">
+          <button className="primary-button send-button" disabled={isSending || !draft.trim()} type="submit">
             {isSending ? '发送中' : '发送'}
           </button>
         </form>
       </section>
 
-      {isConfigOpen && (
-        <div className="modal-backdrop">
-          <div className="config-modal">
-            <h2>服务配置</h2>
-            <p>前端只请求你的 Cloudflare Worker，真实供应商地址和 API Key 请配置在 Worker 环境变量中。</p>
-            <label>
-              当前代理地址
-              <input value={API_BASE_URL} readOnly />
-            </label>
-            <div className="modal-actions">
-              <button className="primary-button" type="button" onClick={() => setIsConfigOpen(false)}>知道了</button>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }
