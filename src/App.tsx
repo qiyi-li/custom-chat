@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchModels, sendChatCompletion } from './api';
+import { fetchModels, streamChatCompletion } from './api';
 import { ChatHeader } from './components/ChatHeader';
 import { MessageComposer } from './components/MessageComposer';
 import { MessageList } from './components/MessageList';
@@ -20,6 +20,7 @@ function App() {
   const [isSending, setIsSending] = useState(false);
   const [notice, setNotice] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const activeConversation = useMemo(
     () => state.conversations.find((conversation) => conversation.id === state.activeConversationId) ?? null,
@@ -130,6 +131,12 @@ function App() {
     }));
   }
 
+  function handleStopGeneration() {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsSending(false);
+  }
+
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = draft.trim();
@@ -163,27 +170,69 @@ function App() {
       activeConversationId: updatedConversation.id,
     }));
 
+    const assistantMessage = createMessage('assistant', '');
+    setState((current) => ({
+      ...current,
+      conversations: current.conversations.map((conversation) =>
+        conversation.id === updatedConversation.id
+          ? {
+              ...conversation,
+              messages: [...conversation.messages, assistantMessage],
+              updatedAt: Date.now(),
+            }
+          : conversation,
+      ),
+    }));
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
-      const reply = await sendChatCompletion({
-        model: state.config.selectedModel,
-        messages: updatedConversation.messages,
-      });
-      const assistantMessage = createMessage('assistant', reply);
+      await streamChatCompletion(
+        {
+          model: state.config.selectedModel,
+          messages: updatedConversation.messages,
+          signal: abortController.signal,
+        },
+        (delta) => {
+          setState((current) => ({
+            ...current,
+            conversations: current.conversations.map((conversation) =>
+              conversation.id === updatedConversation.id
+                ? {
+                    ...conversation,
+                    messages: conversation.messages.map((message) =>
+                      message.id === assistantMessage.id
+                        ? { ...message, content: `${message.content}${delta}` }
+                        : message,
+                    ),
+                    updatedAt: Date.now(),
+                  }
+                : conversation,
+            ),
+          }));
+        },
+      );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
+
       setState((current) => ({
         ...current,
         conversations: current.conversations.map((conversation) =>
           conversation.id === updatedConversation.id
             ? {
                 ...conversation,
-                messages: [...conversation.messages, assistantMessage],
+                messages: conversation.messages.filter((message) => message.id !== assistantMessage.id || message.content),
                 updatedAt: Date.now(),
               }
             : conversation,
         ),
       }));
-    } catch (error) {
       setNotice(error instanceof Error ? error.message : '发送失败，请稍后重试。');
     } finally {
+      abortControllerRef.current = null;
       setIsSending(false);
     }
   }
@@ -228,6 +277,7 @@ function App() {
           draft={draft}
           isSending={isSending}
           onDraftChange={setDraft}
+          onStop={handleStopGeneration}
           onSubmit={handleSend}
         />
       </section>

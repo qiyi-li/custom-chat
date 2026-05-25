@@ -1,3 +1,5 @@
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { ChatMessage } from '../types';
 
 interface MessageListProps {
@@ -19,16 +21,16 @@ export function MessageList({ messages, isSending, messagesEndRef }: MessageList
       {messages.map((message) => (
         <article className={`message ${message.role}`} key={message.id}>
           <div className="avatar">{message.role === 'user' ? '你' : 'AI'}</div>
-          <div className="bubble">{message.content}</div>
+          <div className="bubble markdown-body">
+            {message.content ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+            ) : (
+              <span className="stream-cursor">正在生成</span>
+            )}
+          </div>
         </article>
       ))}
 
-      {isSending && (
-        <article className="message assistant">
-          <div className="avatar">AI</div>
-          <div className="bubble typing">正在思考...</div>
-        </article>
-      )}
       <div ref={messagesEndRef} />
     </div>
   );
