@@ -592,12 +592,16 @@ textarea:focus {
 
 .composer {
   display: grid;
-  max-height: 150px;
-  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   padding: 18px clamp(18px, 4vw, 72px) 24px;
   border-top: 1px solid #2a2a2a;
   background: #111111;
+}
+
+.composer-input-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
 }
 
 .composer textarea {
@@ -605,6 +609,88 @@ textarea:focus {
   max-height: 180px;
   resize: vertical;
   padding: 14px 16px;
+}
+
+.attach-button {
+  display: grid;
+  min-width: 72px;
+  place-items: center;
+}
+
+.attach-button input {
+  display: none;
+}
+
+.attach-button.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.image-preview-list,
+.message-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.image-preview-list {
+  max-width: 940px;
+  margin: 0 auto;
+}
+
+.image-preview {
+  position: relative;
+  overflow: hidden;
+  width: 112px;
+  margin: 0;
+  border: 1px solid #333333;
+  border-radius: 12px;
+  background: #171717;
+}
+
+.image-preview img,
+.message-images img {
+  display: block;
+  width: 100%;
+  object-fit: cover;
+}
+
+.image-preview img {
+  height: 82px;
+}
+
+.image-preview figcaption {
+  overflow: hidden;
+  padding: 6px 8px;
+  color: #cfcfcf;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-preview button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #111111;
+  background: rgba(255, 255, 255, 0.88);
+  line-height: 1;
+}
+
+.message-images {
+  margin-bottom: 12px;
+}
+
+.message-images img {
+  max-width: 240px;
+  max-height: 240px;
+  border-radius: 12px;
 }
 
 .send-button {
@@ -680,7 +766,7 @@ textarea:focus {
 
   .topbar,
   .model-controls,
-  .composer {
+  .composer-input-row {
     grid-template-columns: 1fr;
     align-items: stretch;
   }

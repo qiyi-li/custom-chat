@@ -37,6 +37,14 @@ interface SendChatCompletionOptions {
   signal?: AbortSignal;
 }
 
+type ChatPayloadContent = string | Array<{
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: {
+    url: string;
+  };
+}>;
+
 export const API_BASE_URL = 'https://chatapiproxy.errgou.workers.dev';
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -52,10 +60,29 @@ async function parseError(response: Response): Promise<string> {
   }
 }
 
+function createMessageContent(message: ChatMessage): ChatPayloadContent {
+  if (!message.images?.length) {
+    return message.content;
+  }
+
+  return [
+    ...(message.content ? [{ type: 'text' as const, text: message.content }] : []),
+    ...message.images.map((image) => ({
+      type: 'image_url' as const,
+      image_url: {
+        url: image.dataUrl,
+      },
+    })),
+  ];
+}
+
 function createChatPayload(options: SendChatCompletionOptions, stream: boolean) {
   return {
     model: options.model,
-    messages: buildBudgetedMessages(options.messages).map(({ role, content }) => ({ role, content })),
+    messages: buildBudgetedMessages(options.messages).map((message) => ({
+      role: message.role,
+      content: createMessageContent(message),
+    })),
     temperature: 0.7,
     stream,
   };

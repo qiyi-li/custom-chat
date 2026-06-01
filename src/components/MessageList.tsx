@@ -22,6 +22,13 @@ export function MessageList({ messages, isSending, messagesEndRef }: MessageList
         <article className={`message ${message.role}`} key={message.id}>
           <div className="avatar">{message.role === 'user' ? '你' : 'AI'}</div>
           <div className="bubble markdown-body">
+            {message.images?.length ? (
+              <div className="message-images">
+                {message.images.map((image) => (
+                  <img alt={image.name} key={image.id} src={image.dataUrl} />
+                ))}
+              </div>
+            ) : null}
             {message.content ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
             ) : (

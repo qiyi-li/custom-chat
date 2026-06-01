@@ -6,13 +6,14 @@ import { MessageList } from './components/MessageList';
 import { Sidebar } from './components/Sidebar';
 import { useAutoDismissNotice } from './hooks/useAutoDismissNotice';
 import { createConversation, getConversationTitle, loadState, saveState } from './storage';
-import type { Conversation, ModelInfo, PersistedState } from './types';
+import type { Conversation, MessageImage, ModelInfo, PersistedState } from './types';
 import { createMessage } from './utils/messages';
 
 function App() {
   const [state, setState] = useState<PersistedState>(() => loadState());
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [draft, setDraft] = useState('');
+  const [attachedImages, setAttachedImages] = useState<MessageImage[]>([]);
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -140,8 +141,9 @@ function App() {
   async function handleSend(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const content = draft.trim();
+    const images = attachedImages;
 
-    if (!content || isSending) {
+    if ((!content && images.length === 0) || isSending) {
       return;
     }
 
@@ -151,17 +153,19 @@ function App() {
     }
 
     const currentConversation = activeConversation ?? createConversation(state.config.selectedModel);
-    const userMessage = createMessage('user', content);
+    const messageContent = content || '请描述这张图片。';
+    const userMessage = createMessage('user', messageContent, images);
     const updatedConversation: Conversation = {
       ...currentConversation,
       model: state.config.selectedModel,
-      title: currentConversation.messages.length ? currentConversation.title : getConversationTitle(content),
+      title: currentConversation.messages.length ? currentConversation.title : getConversationTitle(messageContent),
       messages: [...currentConversation.messages, userMessage],
       updatedAt: Date.now(),
     };
     const withoutCurrent = state.conversations.filter((conversation) => conversation.id !== updatedConversation.id);
 
     setDraft('');
+    setAttachedImages([]);
     setNotice('');
     setIsSending(true);
     setState((current) => ({
@@ -275,8 +279,10 @@ function App() {
 
         <MessageComposer
           draft={draft}
+          images={attachedImages}
           isSending={isSending}
           onDraftChange={setDraft}
+          onImagesChange={setAttachedImages}
           onStop={handleStopGeneration}
           onSubmit={handleSend}
         />

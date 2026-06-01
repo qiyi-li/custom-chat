@@ -5,12 +5,13 @@ const RECENT_MESSAGE_COUNT = 10;
 const SUMMARY_MAX_CHARACTERS = 1800;
 
 function estimateMessageSize(message: ChatMessage): number {
-  return message.content.length + message.role.length + 16;
+  return message.content.length + message.role.length + (message.images?.length ?? 0) * 1024 + 16;
 }
 
 function formatSummaryLine(message: ChatMessage): string {
   const speaker = message.role === 'user' ? '用户' : message.role === 'assistant' ? '助手' : '系统';
-  return `${speaker}: ${message.content.trim()}`;
+  const imageNote = message.images?.length ? ` [包含${message.images.length}张图片]` : '';
+  return `${speaker}: ${message.content.trim()}${imageNote}`;
 }
 
 function createHistorySummary(messages: ChatMessage[]): ChatMessage | null {

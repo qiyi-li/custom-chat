@@ -1,9 +1,17 @@
 export type Role = 'user' | 'assistant' | 'system';
 
+export interface MessageImage {
+  id: string;
+  name: string;
+  type: string;
+  dataUrl: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: Role;
   content: string;
+  images?: MessageImage[];
   createdAt: number;
 }
 
