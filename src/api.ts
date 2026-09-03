@@ -45,7 +45,8 @@ type ChatPayloadContent = string | Array<{
   };
 }>;
 
-export const API_BASE_URL = 'https://chatapiproxy.errgou.workers.dev';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.trim() || '/api';
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, '');
