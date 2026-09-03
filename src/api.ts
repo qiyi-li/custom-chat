@@ -1,5 +1,5 @@
 import { buildBudgetedMessages } from './contextBudget';
-import type { ChatMessage, ModelInfo } from './types';
+import type { ChatMessage, MessageImage, ModelInfo } from './types';
 
 interface ModelListResponse {
   data?: Array<{ id?: string; owned_by?: string }>;
@@ -30,6 +30,16 @@ interface ChatCompletionChunk {
   };
 }
 
+interface ImageGenerationResponse {
+  data?: Array<{
+    b64_json?: string;
+    url?: string;
+  }>;
+  error?: {
+    message?: string;
+  };
+}
+
 interface SendChatCompletionOptions {
   baseUrl?: string;
   model: string;
@@ -44,6 +54,13 @@ type ChatPayloadContent = string | Array<{
     url: string;
   };
 }>;
+
+interface GenerateImageOptions {
+  model: string;
+  prompt: string;
+  images: MessageImage[];
+  signal?: AbortSignal;
+}
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() || '/api';
@@ -127,6 +144,81 @@ export async function fetchModels(baseUrl = API_BASE_URL): Promise<ModelInfo[]> 
   return (body.data ?? [])
     .filter((model) => Boolean(model.id))
     .map((model) => ({ id: model.id!, ownedBy: model.owned_by }));
+}
+
+function imageResultToMessageImage(image: NonNullable<ImageGenerationResponse['data']>[number]): MessageImage {
+  const dataUrl = image.b64_json
+    ? `data:image/png;base64,${image.b64_json}`
+    : image.url;
+
+  if (!dataUrl) {
+    throw new Error('图片服务没有返回图片数据');
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    name: '生成图片.png',
+    type: 'image/png',
+    dataUrl,
+  };
+}
+
+async function imageToBlob(image: MessageImage): Promise<Blob> {
+  const response = await fetch(image.dataUrl);
+  if (!response.ok) {
+    throw new Error(`无法读取参考图片：${image.name}`);
+  }
+
+  return response.blob();
+}
+
+export async function generateImage(options: GenerateImageOptions): Promise<MessageImage[]> {
+  const baseUrl = normalizeBaseUrl(API_BASE_URL);
+  const isEdit = options.images.length > 0;
+  let response: Response;
+
+  if (isEdit) {
+    const formData = new FormData();
+    formData.set('model', options.model);
+    formData.set('prompt', options.prompt);
+    formData.set('response_format', 'b64_json');
+    await Promise.all(options.images.map(async (image) => {
+      formData.append('image', await imageToBlob(image), image.name);
+    }));
+
+    response = await fetch(`${baseUrl}/images/edits`, {
+      method: 'POST',
+      body: formData,
+      signal: options.signal,
+    });
+  } else {
+    response = await fetch(`${baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: options.model,
+        prompt: options.prompt,
+        response_format: 'b64_json',
+      }),
+      signal: options.signal,
+    });
+  }
+
+  if (!response.ok) {
+    throw new Error(`图片${isEdit ? '编辑' : '生成'}失败：${await parseError(response)}`);
+  }
+
+  const body = (await response.json()) as ImageGenerationResponse;
+  if (body.error?.message) {
+    throw new Error(body.error.message);
+  }
+
+  const images = body.data?.map(imageResultToMessageImage) ?? [];
+  if (!images.length) {
+    throw new Error('图片服务没有返回图片数据');
+  }
+
+  return images;
 }
 
 export async function sendChatCompletion(options: SendChatCompletionOptions): Promise<string> {

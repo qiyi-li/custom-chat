@@ -4,6 +4,7 @@ import type { MessageImage } from '../types';
 interface MessageComposerProps {
   draft: string;
   images: MessageImage[];
+  isImageModel: boolean;
   isSending: boolean;
   onDraftChange: (draft: string) => void;
   onImagesChange: (images: MessageImage[]) => void;
@@ -33,6 +34,7 @@ function fileToMessageImage(file: File): Promise<MessageImage> {
 export function MessageComposer({
   draft,
   images,
+  isImageModel,
   isSending,
   onDraftChange,
   onImagesChange,
@@ -74,7 +76,7 @@ export function MessageComposer({
 
       <div className="composer-input-row">
         <label className={`ghost-button attach-button ${images.length >= MAX_IMAGE_COUNT || isSending ? 'disabled' : ''}`}>
-          图片
+          {isImageModel ? '参考图' : '图片'}
           <input
             accept="image/*"
             disabled={images.length >= MAX_IMAGE_COUNT || isSending}
@@ -98,7 +100,9 @@ export function MessageComposer({
               event.currentTarget.form?.requestSubmit();
             }
           }}
-          placeholder="输入问题，可上传图片后提问，Ctrl/Cmd + Enter 发送"
+          placeholder={isImageModel
+            ? '描述要生成的图片；上传参考图后可进行编辑，Ctrl/Cmd + Enter 发送'
+            : '输入问题，可上传图片后提问，Ctrl/Cmd + Enter 发送'}
           rows={3}
         />
         {isSending ? (
@@ -107,7 +111,7 @@ export function MessageComposer({
           </button>
         ) : (
           <button className="primary-button send-button" disabled={!draft.trim() && images.length === 0} type="submit">
-            发送
+            {isImageModel ? (images.length ? '编辑图片' : '生成图片') : '发送'}
           </button>
         )}
       </div>

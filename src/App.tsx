@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchModels, streamChatCompletion } from './api';
+import { fetchModels, generateImage, streamChatCompletion } from './api';
 import { ChatHeader } from './components/ChatHeader';
 import { MessageComposer } from './components/MessageComposer';
 import { MessageList } from './components/MessageList';
@@ -27,6 +27,7 @@ function App() {
     () => state.conversations.find((conversation) => conversation.id === state.activeConversationId) ?? null,
     [state.activeConversationId, state.conversations],
   );
+  const isImageModel = state.config.selectedModel.startsWith('gpt-image-');
 
   const clearNotice = useCallback(() => setNotice(''), []);
   useAutoDismissNotice(notice, clearNotice);
@@ -153,7 +154,7 @@ function App() {
     }
 
     const currentConversation = activeConversation ?? createConversation(state.config.selectedModel);
-    const messageContent = content || '请描述这张图片。';
+    const messageContent = content || (isImageModel ? '请基于参考图片生成新图片。' : '请描述这张图片。');
     const userMessage = createMessage('user', messageContent, images);
     const updatedConversation: Conversation = {
       ...currentConversation,
@@ -192,31 +193,57 @@ function App() {
     abortControllerRef.current = abortController;
 
     try {
-      await streamChatCompletion(
-        {
+      if (isImageModel) {
+        const generatedImages = await generateImage({
           model: state.config.selectedModel,
-          messages: updatedConversation.messages,
+          prompt: messageContent,
+          images,
           signal: abortController.signal,
-        },
-        (delta) => {
-          setState((current) => ({
-            ...current,
-            conversations: current.conversations.map((conversation) =>
-              conversation.id === updatedConversation.id
-                ? {
-                    ...conversation,
-                    messages: conversation.messages.map((message) =>
-                      message.id === assistantMessage.id
-                        ? { ...message, content: `${message.content}${delta}` }
-                        : message,
-                    ),
-                    updatedAt: Date.now(),
-                  }
-                : conversation,
-            ),
-          }));
-        },
-      );
+        });
+
+        setState((current) => ({
+          ...current,
+          conversations: current.conversations.map((conversation) =>
+            conversation.id === updatedConversation.id
+              ? {
+                  ...conversation,
+                  messages: conversation.messages.map((message) =>
+                    message.id === assistantMessage.id
+                      ? { ...message, content: '已生成图片。', images: generatedImages }
+                      : message,
+                  ),
+                  updatedAt: Date.now(),
+                }
+              : conversation,
+          ),
+        }));
+      } else {
+        await streamChatCompletion(
+          {
+            model: state.config.selectedModel,
+            messages: updatedConversation.messages,
+            signal: abortController.signal,
+          },
+          (delta) => {
+            setState((current) => ({
+              ...current,
+              conversations: current.conversations.map((conversation) =>
+                conversation.id === updatedConversation.id
+                  ? {
+                      ...conversation,
+                      messages: conversation.messages.map((message) =>
+                        message.id === assistantMessage.id
+                          ? { ...message, content: `${message.content}${delta}` }
+                          : message,
+                      ),
+                      updatedAt: Date.now(),
+                    }
+                  : conversation,
+              ),
+            }));
+          },
+        );
+      }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return;
@@ -280,6 +307,7 @@ function App() {
         <MessageComposer
           draft={draft}
           images={attachedImages}
+          isImageModel={isImageModel}
           isSending={isSending}
           onDraftChange={setDraft}
           onImagesChange={setAttachedImages}

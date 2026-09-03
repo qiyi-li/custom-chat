@@ -1,24 +1,34 @@
 // Vercel Hobby serverless proxy. Configure API_KEY and TARGET_BASE_URL
 // in the Vercel project settings; never commit the provider key.
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export default async function handler(request, response) {
   if (request.method === 'OPTIONS') {
     setCors(response);
     return response.status(204).end();
   }
 
-  const apiKey = process.env.API_KEY;
   const targetBaseUrl = process.env.TARGET_BASE_URL;
+  const incomingUrl = new URL(request.url, `https://${request.headers.host || 'localhost'}`);
+  const isImageRequest = incomingUrl.pathname.startsWith('/api/images/');
+  const apiKey = isImageRequest ? process.env.API_KEY_IMAGE : process.env.API_KEY;
+
   if (!apiKey || !targetBaseUrl) {
     setCors(response);
     return response.status(500).json({
-      error: { message: 'Vercel 环境变量 API_KEY 或 TARGET_BASE_URL 未配置' },
+      error: {
+        message: `Vercel 环境变量 ${isImageRequest ? 'API_KEY_IMAGE' : 'API_KEY'} 或 TARGET_BASE_URL 未配置`,
+      },
     });
   }
 
   try {
     const base = new URL(targetBaseUrl);
     const targetPath = base.pathname.replace(/\/+$/, '');
-    const incomingUrl = new URL(request.url, `https://${request.headers.host || 'localhost'}`);
     // Read the actual request URL instead of req.query: Vercel's catch-all
     // route parameters are not consistently exposed there across runtimes.
     const requestedPath = incomingUrl.pathname.replace(/^\/api(?:\/|$)/, '/') || '/';
@@ -57,7 +67,7 @@ export default async function handler(request, response) {
     const upstream = await fetch(base.toString(), {
       method: request.method,
       headers,
-      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : JSON.stringify(request.body),
+      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : await readRequestBody(request),
     });
 
     setCors(response);
@@ -69,6 +79,16 @@ export default async function handler(request, response) {
     setCors(response);
     return response.status(502).json({ error: { message: `上游请求失败：${String(error)}` } });
   }
+}
+
+async function readRequestBody(request) {
+  const chunks = [];
+
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks);
 }
 
 function setCors(response) {
