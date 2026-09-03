@@ -33,7 +33,7 @@ export default async function handler(request, response) {
     // segment as `path`; never forward that internal parameter upstream.
     const upstreamQuery = new URLSearchParams();
     for (const [key, value] of Object.entries(request.query || {})) {
-      if (key === 'path' || value == null) continue;
+      if (key === 'path' || key === '...path' || value == null) continue;
       if (Array.isArray(value)) {
         value.forEach((item) => upstreamQuery.append(key, String(item)));
       } else {
