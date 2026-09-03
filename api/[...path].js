@@ -27,7 +27,11 @@ export default async function handler(request, response) {
       : requestedPath;
 
     base.pathname = `${targetPath}/${path.replace(/^\/+/, '')}`.replace(/\/+/g, '/');
-    base.search = incomingUrl.search;
+    // `path=models` may be injected by the catch-all route. It is only an
+    // internal Vercel routing parameter and Air Router rejects unknown params.
+    const upstreamQuery = new URLSearchParams(incomingUrl.searchParams);
+    upstreamQuery.delete('path');
+    base.search = upstreamQuery.toString() ? `?${upstreamQuery.toString()}` : '';
 
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
