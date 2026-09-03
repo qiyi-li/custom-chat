@@ -35,7 +35,11 @@ export default async function handler(request, response) {
         headers.set(key, Array.isArray(value) ? value.join(',') : value);
       }
     }
-    headers.set('Authorization', `Bearer ${apiKey}`);
+    // Accept either a raw key (`sk-...`) or a pasted `Bearer sk-...` value.
+    // Air Router accepts both Authorization and x-api-key authentication.
+    const normalizedApiKey = apiKey.replace(/^Bearer\s+/i, '').trim();
+    headers.set('Authorization', `Bearer ${normalizedApiKey}`);
+    headers.set('x-api-key', normalizedApiKey);
 
     const upstream = await fetch(base.toString(), {
       method: request.method,
