@@ -18,14 +18,16 @@ export default async function handler(request, response) {
   try {
     const base = new URL(targetBaseUrl);
     const targetPath = base.pathname.replace(/\/+$/, '');
-    const requestedPath = `/${Array.isArray(request.query.path) ? request.query.path.join('/') : request.query.path || ''}`;
+    const incomingUrl = new URL(request.url, `https://${request.headers.host || 'localhost'}`);
+    // Read the actual request URL instead of req.query: Vercel's catch-all
+    // route parameters are not consistently exposed there across runtimes.
+    const requestedPath = incomingUrl.pathname.replace(/^\/api(?:\/|$)/, '/') || '/';
     const path = targetPath.endsWith('/v1') && (requestedPath === '/v1' || requestedPath.startsWith('/v1/'))
       ? requestedPath.slice(3) || '/'
       : requestedPath;
 
     base.pathname = `${targetPath}/${path.replace(/^\/+/, '')}`.replace(/\/+/g, '/');
-    const query = new URL(request.url, `https://${request.headers.host}`).search;
-    base.search = query;
+    base.search = incomingUrl.search;
 
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
