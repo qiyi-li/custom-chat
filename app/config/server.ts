@@ -8,9 +8,12 @@ declare global {
       PROXY_URL?: string; // docker only
 
       OPENAI_API_KEY?: string;
+      // Backward-compatible names used by the previous Cloudflare Worker.
+      API_KEY?: string;
       CODE?: string;
 
       BASE_URL?: string;
+      TARGET_BASE_URL?: string;
       OPENAI_ORG_ID?: string; // openai only
 
       VERCEL?: string;
@@ -181,8 +184,8 @@ export const getServerSideConfig = () => {
   ).split(",");
 
   return {
-    baseUrl: process.env.BASE_URL,
-    apiKey: getApiKey(process.env.OPENAI_API_KEY),
+    baseUrl: process.env.BASE_URL || process.env.TARGET_BASE_URL,
+    apiKey: getApiKey(process.env.OPENAI_API_KEY || process.env.API_KEY),
     openaiOrgId: process.env.OPENAI_ORG_ID,
 
     isStability,
@@ -265,7 +268,8 @@ export const getServerSideConfig = () => {
     proxyUrl: process.env.PROXY_URL,
     isVercel: !!process.env.VERCEL,
 
-    hideUserApiKey: !!process.env.HIDE_USER_API_KEY,
+    // The Vercel deployment owns the provider key; do not allow browser keys.
+    hideUserApiKey: process.env.HIDE_USER_API_KEY !== "0",
     disableGPT4,
     hideBalanceQuery: !process.env.ENABLE_BALANCE_QUERY,
     disableFastLink: !!process.env.DISABLE_FAST_LINK,

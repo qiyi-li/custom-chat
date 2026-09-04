@@ -10,6 +10,7 @@ This repository is based on [NextChat](https://github.com/ChatGPTNextWeb/NextCha
    ```text
    OPENAI_API_KEY=your-new-air-router-key
    BASE_URL=https://www.air-router.com/v1
+   HIDE_USER_API_KEY=1
    CODE=a-long-private-password
    ```
 
@@ -17,6 +18,8 @@ This repository is based on [NextChat](https://github.com/ChatGPTNextWeb/NextCha
 4. Open the `*.vercel.app` URL and enter the value of `CODE` when prompted.
 
 `OPENAI_API_KEY` is used only by the Vercel server-side API route. Never give it a `NEXT_PUBLIC_` prefix and do not put it in GitHub or browser storage.
+
+The app also accepts the legacy names `API_KEY` and `TARGET_BASE_URL`, but `OPENAI_API_KEY` and `BASE_URL` are the recommended names.
 
 ## Models
 
