@@ -29,6 +29,7 @@
     "@vercel/analytics": "^0.1.11",
     "@vercel/speed-insights": "^1.0.2",
     "axios": "^1.7.5",
+    "bufferutil": "^4.0.8",
     "clsx": "^2.1.1",
     "emoji-picker-react": "^4.9.2",
     "fuse.js": "^7.0.0",
@@ -87,6 +88,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.16.0",
     "typescript": "5.2.2",
+    "utf-8-validate": "^6.0.5",
     "watch": "^1.0.2",
     "webpack": "^5.88.1"
   },

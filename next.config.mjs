@@ -8,6 +8,11 @@ console.log("[Next] build with chunk: ", !disableChunk);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // The bundled template's legacy unused-imports plugin crashes with modern ESLint.
+  // Keep linting available as a separate local command without blocking deployment.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
