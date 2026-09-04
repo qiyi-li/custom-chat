@@ -59,6 +59,12 @@ export function Sidebar({
                   onSelectConversation(conversation.id);
                 }
               }}
+              onKeyDown={(event) => {
+                if ((event.key === 'Enter' || event.key === ' ') && !isEditing) {
+                  event.preventDefault();
+                  onSelectConversation(conversation.id);
+                }
+              }}
               role="button"
               tabIndex={0}
             >

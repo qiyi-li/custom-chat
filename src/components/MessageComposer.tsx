@@ -1,4 +1,4 @@
-import type { ChangeEvent, FormEvent } from 'react';
+import { useEffect, useRef, type ChangeEvent, type FormEvent } from 'react';
 import type { MessageImage } from '../types';
 
 interface MessageComposerProps {
@@ -41,6 +41,15 @@ export function MessageComposer({
   onStop,
   onSubmit,
 }: MessageComposerProps) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 180)}px`;
+  }, [draft]);
+
   async function handleImageSelect(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith('image/'));
     event.target.value = '';
@@ -61,7 +70,9 @@ export function MessageComposer({
   return (
     <form className="composer" onSubmit={onSubmit}>
       {images.length > 0 && (
-        <div className="image-preview-list">
+        <div className="attachment-strip">
+          <span className="attachment-label">{isImageModel ? '参考图片' : '已附加图片'} · {images.length}/4</span>
+          <div className="image-preview-list">
           {images.map((image) => (
             <figure className="image-preview" key={image.id}>
               <img alt={image.name} src={image.dataUrl} />
@@ -71,6 +82,7 @@ export function MessageComposer({
               </button>
             </figure>
           ))}
+          </div>
         </div>
       )}
 
@@ -86,6 +98,7 @@ export function MessageComposer({
           />
         </label>
         <textarea
+          ref={textareaRef}
           value={draft}
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={(event) => {

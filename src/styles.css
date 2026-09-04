@@ -1,6 +1,6 @@
 :root {
-  color: #f5f5f5;
-  background: #111111;
+  color: #edf1f6;
+  background: #101419;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -21,7 +21,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   overflow: hidden;
-  background: #111111;
+  background: #101419;
 }
 
 button,
@@ -59,8 +59,8 @@ button:disabled {
   flex-direction: column;
   gap: 16px;
   padding: 20px;
-  border-right: 1px solid #2a2a2a;
-  background: #171717;
+  border-right: 1px solid #29313a;
+  background: #161c23;
   transition: padding 0.2s ease;
 }
 
@@ -94,10 +94,10 @@ button:disabled {
   width: 40px;
   height: 40px;
   place-items: center;
-  border: 1px solid #3a3a3a;
-  border-radius: 12px;
-  background: #222222;
-  color: #f5f5f5;
+  border: 1px solid #3f80a5;
+  border-radius: 8px;
+  background: #163a50;
+  color: #e7f6ff;
   font-weight: 800;
 }
 
@@ -115,10 +115,10 @@ button:disabled {
   height: 34px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid #333333;
-  border-radius: 10px;
+  border: 1px solid #39434e;
+  border-radius: 7px;
   color: #e8e8e8;
-  background: #1d1d1d;
+  background: #202832;
   font-size: 22px;
   line-height: 1;
 }
@@ -150,21 +150,21 @@ button:disabled {
 
 .primary-button,
 .ghost-button {
-  border-radius: 12px;
+  border-radius: 7px;
   padding: 11px 15px;
   transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 
 .primary-button {
-  border: 1px solid #f5f5f5;
-  color: #111111;
-  background: #f5f5f5;
+  border: 1px solid #7cc7ef;
+  color: #07131c;
+  background: #8bd3f5;
 }
 
 .ghost-button {
-  border: 1px solid #333333;
-  color: #e8e8e8;
-  background: #1d1d1d;
+  border: 1px solid #39434e;
+  color: #d8e0e8;
+  background: #202832;
 }
 
 .compact {
@@ -198,10 +198,10 @@ button:disabled {
   width: 100%;
   min-height: 48px;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 7px;
   padding: 12px 68px 12px 13px;
   color: #e8e8e8;
-  background: #1d1d1d;
+  background: transparent;
   text-align: left;
   cursor: pointer;
 }
@@ -240,12 +240,12 @@ button:disabled {
 }
 
 .history-item:hover {
-  background: #242424;
+  background: #222b35;
 }
 
 .history-item.active {
-  border-color: #555555;
-  background: #2a2a2a;
+  border-color: #487a96;
+  background: #243947;
 }
 
 .history-item span {
@@ -295,7 +295,7 @@ button:disabled {
   min-height: 0;
   height: 100dvh;
   overflow: hidden;
-  background: #111111;
+  background: #101419;
 }
 
 .topbar {
@@ -303,9 +303,9 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 20px 28px;
-  border-bottom: 1px solid #2a2a2a;
-  background: #111111;
+  padding: 16px 28px;
+  border-bottom: 1px solid #29313a;
+  background: #151b22;
 }
 
 .topbar h1,
@@ -314,7 +314,7 @@ button:disabled {
 }
 
 .topbar h1 {
-  font-size: clamp(20px, 3vw, 28px);
+  font-size: 22px;
   font-weight: 650;
 }
 
@@ -324,13 +324,40 @@ button:disabled {
   gap: 10px;
 }
 
+.title-line,
+.model-select-label {
+  display: flex;
+  align-items: center;
+}
+
+.title-line { gap: 10px; }
+
+.mode-pill {
+  border: 1px solid #3e6579;
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: #a9dff5;
+  background: #15313f;
+  font-size: 12px;
+}
+
+.mode-pill.image {
+  border-color: #766345;
+  color: #ffe1a3;
+  background: #3a3020;
+}
+
+.model-select-label { gap: 8px; color: #9ca9b5; font-size: 13px; }
+.model-select-label select { min-width: 210px; }
+.refresh-button { display: inline-flex; gap: 6px; align-items: center; }
+
 select,
 input,
 textarea {
-  border: 1px solid #333333;
-  border-radius: 12px;
+  border: 1px solid #39434e;
+  border-radius: 7px;
   color: #eeeeee;
-  background: #171717;
+  background: #151b22;
   outline: none;
 }
 
@@ -349,11 +376,11 @@ textarea:focus {
 
 .notice {
   margin: 14px 28px 0;
-  border: 1px solid #4a4a4a;
-  border-radius: 12px;
+  border: 1px solid #765d3a;
+  border-radius: 7px;
   padding: 12px 14px;
   color: #e5e5e5;
-  background: #202020;
+  background: #2a251d;
 }
 
 .messages {
@@ -367,10 +394,10 @@ textarea:focus {
 .welcome-card {
   max-width: 720px;
   margin: 12vh auto 0;
-  border: 1px solid #2f2f2f;
-  border-radius: 22px;
+  border: 1px solid #34404c;
+  border-radius: 8px;
   padding: 34px;
-  background: #171717;
+  background: #182029;
   text-align: center;
 }
 
@@ -427,11 +454,11 @@ textarea:focus {
 .bubble {
   width: fit-content;
   max-width: 100%;
-  border: 1px solid #2f2f2f;
-  border-radius: 18px;
+  border: 1px solid #34404c;
+  border-radius: 8px;
   padding: 14px 16px;
   color: #e8e8e8;
-  background: #1b1b1b;
+  background: #182029;
   line-height: 1.7;
   word-break: break-word;
 }
@@ -594,8 +621,8 @@ textarea:focus {
   display: grid;
   gap: 12px;
   padding: 18px clamp(18px, 4vw, 72px) 24px;
-  border-top: 1px solid #2a2a2a;
-  background: #111111;
+  border-top: 1px solid #29313a;
+  background: #151b22;
 }
 
 .composer-input-row {
@@ -607,7 +634,7 @@ textarea:focus {
 .composer textarea {
   min-height: 66px;
   max-height: 180px;
-  resize: vertical;
+  resize: none;
   padding: 14px 16px;
 }
 
@@ -634,9 +661,17 @@ textarea:focus {
 }
 
 .image-preview-list {
-  max-width: 940px;
+  max-width: 100%;
+}
+
+.attachment-strip {
+  display: grid;
+  gap: 8px;
+  width: min(940px, 100%);
   margin: 0 auto;
 }
+
+.attachment-label { color: #9ca9b5; font-size: 13px; }
 
 .image-preview {
   position: relative;
