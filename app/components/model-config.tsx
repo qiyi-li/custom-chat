@@ -110,6 +110,32 @@ export function ModelConfigList(props: {
         ></input>
       </ListItem>
 
+      {props.modelConfig.model.startsWith("gpt-5") && (
+        <ListItem
+          title="推理强度 (reasoning_effort)"
+          subTitle="控制 GPT-5 思考深度；medium 是默认推荐值"
+        >
+          <Select
+            aria-label="推理强度"
+            value={props.modelConfig.reasoning_effort ?? "medium"}
+            align="left"
+            onChange={(e) =>
+              props.updateConfig(
+                (config) =>
+                  (config.reasoning_effort = e.currentTarget.value as
+                    | "low"
+                    | "medium"
+                    | "high"),
+              )
+            }
+          >
+            <option value="low">低（low）</option>
+            <option value="medium">中（medium）</option>
+            <option value="high">高（high）</option>
+          </Select>
+        </ListItem>
+      )}
+
       {props.modelConfig?.providerName == ServiceProvider.Google ? null : (
         <>
           <ListItem

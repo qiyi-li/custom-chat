@@ -71,6 +71,7 @@ export const DEFAULT_CONFIG = {
     max_tokens: 4000,
     presence_penalty: 0,
     frequency_penalty: 0,
+    reasoning_effort: "medium" as "low" | "medium" | "high",
     sendMemory: true,
     historyMessageCount: 4,
     compressMessageLengthThreshold: 1000,
