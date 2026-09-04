@@ -23,4 +23,4 @@ The app also accepts the legacy names `API_KEY` and `TARGET_BASE_URL`, but `OPEN
 
 ## Models
 
-The application requests the model list through its server-side OpenAI-compatible proxy. Pick a returned model from Settings, or add the model ID supplied by Air Router if it is not listed.
+The application requests both the model list and chat completions through its server-side OpenAI-compatible proxy. `BASE_URL` may include `/v1`; duplicate `/v1/v1` paths are normalized automatically.

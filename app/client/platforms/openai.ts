@@ -80,7 +80,7 @@ export interface DalleRequestPayload {
 }
 
 export class ChatGPTApi implements LLMApi {
-  private disableListModels = true;
+  private disableListModels = false;
 
   path(path: string): string {
     const accessStore = useAccessStore.getState();
@@ -88,7 +88,7 @@ export class ChatGPTApi implements LLMApi {
     let baseUrl = "";
 
     const isAzure = path.includes("deployments");
-    if (accessStore.useCustomConfig) {
+    if (accessStore.useCustomConfig && !accessStore.hideUserApiKey) {
       if (isAzure && !accessStore.isValidAzure()) {
         throw Error(
           "incomplete azure config, please check it in your settings page",
@@ -506,18 +506,19 @@ export class ChatGPTApi implements LLMApi {
       },
     });
 
+    if (!res.ok) {
+      throw new Error(`Failed to load models: ${res.status}`);
+    }
+
     const resJson = (await res.json()) as OpenAIListModelResponse;
-    const chatModels = resJson.data?.filter(
-      (m) => m.id.startsWith("gpt-") || m.id.startsWith("chatgpt-"),
-    );
+    const chatModels = resJson.data?.filter((model) => Boolean(model.id));
     console.log("[Models]", chatModels);
 
     if (!chatModels) {
       return [];
     }
 
-    //由于目前 OpenAI 的 disableListModels 默认为 true，所以当前实际不会运行到这场
-    let seq = 1000; //同 Constant.ts 中的排序保持一致
+    let seq = 1000;
     return chatModels.map((m) => ({
       name: m.id,
       available: true,

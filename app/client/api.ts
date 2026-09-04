@@ -297,6 +297,8 @@ export function getHeaders(ignoreHeaders: boolean = false) {
         : ""
       : isAI302
       ? accessStore.ai302ApiKey
+      : accessStore.hideUserApiKey
+      ? ""
       : accessStore.openaiApiKey;
     return {
       isGoogle,

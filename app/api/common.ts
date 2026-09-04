@@ -40,6 +40,11 @@ export async function requestOpenai(req: NextRequest) {
     baseUrl = baseUrl.slice(0, -1);
   }
 
+  // NextChat paths already start with v1. Accept BASE_URL with or without /v1.
+  if (baseUrl.endsWith("/v1") && (path === "v1" || path.startsWith("v1/"))) {
+    path = path.slice(3) || "";
+  }
+
   console.log("[Proxy] ", path);
   console.log("[Base Url]", baseUrl);
 
