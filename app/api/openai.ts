@@ -51,7 +51,23 @@ export async function handle(
     );
   }
 
-  const authResult = auth(req, ModelProvider.GPT);
+  // Model discovery runs before the client has loaded or submitted CODE.
+  // Always use the server-side provider key for this read-only endpoint.
+  if (subpath === OpenaiPath.ListModelPath) {
+    const serverConfig = getServerSideConfig();
+    if (!serverConfig.apiKey) {
+      return NextResponse.json(
+        { error: true, msg: "server API key is not configured" },
+        { status: 500 },
+      );
+    }
+    req.headers.set("Authorization", `Bearer ${serverConfig.apiKey}`);
+  }
+
+  const authResult =
+    subpath === OpenaiPath.ListModelPath
+      ? { error: false }
+      : auth(req, ModelProvider.GPT);
   if (authResult.error) {
     return NextResponse.json(authResult, {
       status: 401,
