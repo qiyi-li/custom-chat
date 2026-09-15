@@ -196,7 +196,7 @@ export const useAppConfig = createPersistStore(
   }),
   {
     name: StoreKey.Config,
-    version: 4.1,
+    version: 4.2,
 
     merge(persistedState, currentState) {
       const state = persistedState as ChatConfig | undefined;
@@ -254,6 +254,14 @@ export const useAppConfig = createPersistStore(
           DEFAULT_CONFIG.modelConfig.compressModel;
         state.modelConfig.compressProviderName =
           DEFAULT_CONFIG.modelConfig.compressProviderName;
+      }
+
+      if (
+        version < 4.2 &&
+        ["gpt-4o-mini", "codex-auto-review"].includes(state.modelConfig.model)
+      ) {
+        state.modelConfig.model = "gpt-5.6-sol" as ModelType;
+        state.modelConfig.providerName = ServiceProvider.OpenAI;
       }
 
       return state as any;

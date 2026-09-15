@@ -860,7 +860,7 @@ export const useChatStore = createPersistStore(
   },
   {
     name: StoreKey.Chat,
-    version: 3.3,
+    version: 3.4,
     migrate(persistedState, version) {
       const state = persistedState as any;
       const newState = JSON.parse(
@@ -922,6 +922,19 @@ export const useChatStore = createPersistStore(
           const config = useAppConfig.getState();
           s.mask.modelConfig.compressModel = "";
           s.mask.modelConfig.compressProviderName = "";
+        });
+      }
+
+      if (version < 3.4) {
+        newState.sessions.forEach((session) => {
+          if (
+            ["gpt-4o-mini", "codex-auto-review"].includes(
+              session.mask.modelConfig.model,
+            )
+          ) {
+            session.mask.modelConfig.model = "gpt-5.6-sol" as ModelType;
+            session.mask.modelConfig.providerName = ServiceProvider.OpenAI;
+          }
         });
       }
 
