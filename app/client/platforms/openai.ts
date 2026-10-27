@@ -44,6 +44,7 @@ import {
   getTimeoutMSByModel,
 } from "@/app/utils";
 import { fetch } from "@/app/utils/stream";
+import { createWebSearchFunction, WEB_SEARCH_TOOL } from "@/app/search/tool";
 
 export interface OpenAIListModelResponse {
   object: string;
@@ -306,11 +307,30 @@ export class ChatGPTApi implements LLMApi {
       }
       if (shouldStream) {
         let index = -1;
-        const [tools, funcs] = usePluginStore
+        const [pluginTools, pluginFuncs] = usePluginStore
           .getState()
           .getAsTools(
             useChatStore.getState().currentSession().mask?.plugin || [],
           );
+        const webSearchEnabled =
+          modelConfig.providerName === ServiceProvider.OpenAI && !isO1OrO3;
+        const tools = [
+          ...(pluginTools as any[]),
+          ...(webSearchEnabled ? [WEB_SEARCH_TOOL] : []),
+        ];
+        const funcs = {
+          ...pluginFuncs,
+          ...(webSearchEnabled
+            ? { web_search: createWebSearchFunction(getHeaders()) }
+            : {}),
+        };
+        if (webSearchEnabled) {
+          (requestPayload as RequestPayload).messages.unshift({
+            role: "developer",
+            content:
+              "Use web_search when the answer depends on current information, product research, competitor analysis, pricing, recent changes, or user feedback. Prefer Exa for product and user research, Tavily for recent news and quick fact checks. Always cite the source URLs returned by the tool and distinguish sourced facts from your analysis.",
+          });
+        }
         // console.log("getAsTools", tools, funcs);
         streamWithThink(
           chatPath,
