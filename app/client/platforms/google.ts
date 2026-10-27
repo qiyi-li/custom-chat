@@ -29,6 +29,54 @@ import { nanoid } from "nanoid";
 import { RequestPayload } from "./openai";
 import { fetch } from "@/app/utils/stream";
 
+type GroundingChunk = {
+  web?: {
+    uri?: string;
+    title?: string;
+  };
+};
+
+function supportsGoogleSearch(model: string) {
+  return /^gemini-(?:[3-9](?:\.|-)|2\.(?:0|5)(?:-|$))/.test(model);
+}
+
+function getGroundingSources(res: any) {
+  const responses = Array.isArray(res) ? res : [res];
+  const sources = new Map<string, string>();
+
+  responses.forEach((item) => {
+    const chunks = (item?.candidates?.[0]?.groundingMetadata?.groundingChunks ??
+      []) as GroundingChunk[];
+    chunks.forEach((chunk) => {
+      const uri = chunk?.web?.uri;
+      if (!uri) return;
+      let fallbackTitle = uri;
+      try {
+        fallbackTitle = new URL(uri).hostname;
+      } catch {}
+      sources.set(uri, chunk.web?.title?.trim() || fallbackTitle);
+    });
+  });
+
+  return sources;
+}
+
+function formatGroundingSources(
+  sources: Map<string, string>,
+  startIndex = 0,
+  includeHeading = true,
+) {
+  if (sources.size === 0) return "";
+
+  return [
+    "",
+    ...(includeHeading ? ["### Sources"] : []),
+    ...Array.from(sources.entries()).map(
+      ([uri, title], index) => `${startIndex + index + 1}. [${title}](${uri})`,
+    ),
+  ].join("\n");
+}
+
 export class GeminiProApi implements LLMApi {
   path(path: string, shouldStream = false): string {
     const accessStore = useAccessStore.getState();
@@ -77,12 +125,13 @@ export class GeminiProApi implements LLMApi {
       });
     }
 
-    return (
+    const message =
       getTextFromParts(res?.candidates?.at(0)?.content?.parts) ||
       content || //getTextFromParts(res?.at(0)?.candidates?.at(0)?.content?.parts) ||
       res?.error?.message ||
-      ""
-    );
+      "";
+
+    return message + formatGroundingSources(getGroundingSources(res));
   }
   speech(options: SpeechOptions): Promise<ArrayBuffer> {
     throw new Error("Method not implemented.");
@@ -150,7 +199,7 @@ export class GeminiProApi implements LLMApi {
         model: options.config.model,
       },
     };
-    const requestPayload = {
+    const requestPayload: any = {
       contents: messages,
       generationConfig: {
         // stopSequences: [
@@ -181,6 +230,11 @@ export class GeminiProApi implements LLMApi {
       ],
     };
 
+    const googleSearchEnabled = supportsGoogleSearch(modelConfig.model);
+    if (googleSearchEnabled) {
+      requestPayload.tools = [{ google_search: {} }];
+    }
+
     let shouldStream = !!options.config.stream;
     const controller = new AbortController();
     options.onController?.(controller);
@@ -206,26 +260,34 @@ export class GeminiProApi implements LLMApi {
       );
 
       if (shouldStream) {
-        const [tools, funcs] = usePluginStore
+        const [rawTools, funcs] = usePluginStore
           .getState()
           .getAsTools(
             useChatStore.getState().currentSession().mask?.plugin || [],
           );
+        const tools = rawTools as Array<{ function: object }>;
+        const requestTools = [
+          ...(requestPayload.tools ?? []),
+          ...(tools.length > 0
+            ? [{ functionDeclarations: tools.map((tool) => tool.function) }]
+            : []),
+        ];
+        const groundingSources = new Map<string, string>();
         return stream(
           chatPath,
           requestPayload,
           getHeaders(),
-          // @ts-ignore
-          tools.length > 0
-            ? // @ts-ignore
-              [{ functionDeclarations: tools.map((tool) => tool.function) }]
-            : [],
+          requestTools,
           funcs,
           controller,
           // parseSSE
           (text: string, runTools: ChatMessageTool[]) => {
             // console.log("parseSSE", text, runTools);
             const chunkJson = JSON.parse(text);
+            const previousSourceCount = groundingSources.size;
+            getGroundingSources(chunkJson).forEach((title, uri) =>
+              groundingSources.set(uri, title),
+            );
 
             const functionCall = chunkJson?.candidates
               ?.at(0)
@@ -241,10 +303,27 @@ export class GeminiProApi implements LLMApi {
                 },
               });
             }
-            return chunkJson?.candidates
+            const content = chunkJson?.candidates
               ?.at(0)
               ?.content.parts?.map((part: { text: string }) => part.text)
               .join("\n\n");
+            const newSources =
+              groundingSources.size > previousSourceCount
+                ? new Map(
+                    Array.from(groundingSources.entries()).slice(
+                      previousSourceCount,
+                    ),
+                  )
+                : new Map<string, string>();
+
+            return (
+              (content ?? "") +
+              formatGroundingSources(
+                newSources,
+                previousSourceCount,
+                previousSourceCount === 0,
+              )
+            );
           },
           // processToolMessage, include tool_calls message and tool call results
           (

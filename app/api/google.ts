@@ -101,9 +101,9 @@ async function request(req: NextRequest, apiKey: string) {
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
-      "x-goog-api-key":
-        req.headers.get("x-goog-api-key") ||
-        (req.headers.get("Authorization") ?? "").replace("Bearer ", ""),
+      // Always forward the key resolved by the auth layer. This may be either
+      // the user's Google key or GOOGLE_API_KEY injected from Vercel.
+      "x-goog-api-key": apiKey,
     },
     method: req.method,
     body: req.body,
