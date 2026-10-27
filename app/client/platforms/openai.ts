@@ -45,6 +45,10 @@ import {
 } from "@/app/utils";
 import { fetch } from "@/app/utils/stream";
 import { createWebSearchFunction, WEB_SEARCH_TOOL } from "@/app/search/tool";
+import {
+  CREATE_PRESENTATION_TOOL,
+  createPresentationFunction,
+} from "@/app/presentation/tool";
 
 export interface OpenAIListModelResponse {
   object: string;
@@ -312,23 +316,28 @@ export class ChatGPTApi implements LLMApi {
           .getAsTools(
             useChatStore.getState().currentSession().mask?.plugin || [],
           );
-        const webSearchEnabled =
+        const builtInToolsEnabled =
           modelConfig.providerName === ServiceProvider.OpenAI && !isO1OrO3;
         const tools = [
           ...(pluginTools as any[]),
-          ...(webSearchEnabled ? [WEB_SEARCH_TOOL] : []),
+          ...(builtInToolsEnabled
+            ? [WEB_SEARCH_TOOL, CREATE_PRESENTATION_TOOL]
+            : []),
         ];
         const funcs = {
           ...pluginFuncs,
-          ...(webSearchEnabled
-            ? { web_search: createWebSearchFunction(getHeaders()) }
+          ...(builtInToolsEnabled
+            ? {
+                web_search: createWebSearchFunction(getHeaders()),
+                create_presentation: createPresentationFunction,
+              }
             : {}),
         };
-        if (webSearchEnabled) {
+        if (builtInToolsEnabled) {
           (requestPayload as RequestPayload).messages.unshift({
             role: "developer",
             content:
-              "Use web_search when the answer depends on current information, product research, competitor analysis, pricing, recent changes, or user feedback. Prefer Exa for product and user research, Tavily for recent news and quick fact checks. Always cite the source URLs returned by the tool and distinguish sourced facts from your analysis. If the tool returns code SEARCH_PLAN_EXHAUSTED, clearly tell the user: 搜索套餐已用尽，请补充或更换搜索 API Key。 Do not invent search results or continue as if the search succeeded.",
+              "Use web_search when the answer depends on current information, product research, competitor analysis, pricing, recent changes, or user feedback. Prefer Exa for product and user research, Tavily for recent news and quick fact checks. Always cite the source URLs returned by the tool and distinguish sourced facts from your analysis. If the tool returns code SEARCH_PLAN_EXHAUSTED, clearly tell the user: 搜索套餐已用尽，请补充或更换搜索 API Key。 Do not invent search results or continue as if the search succeeded. When the user asks to create, export, or download a PPT/PowerPoint/slide deck, call create_presentation. Produce a concise 5-12 slide narrative unless the user specifies otherwise. Use a cover, then select bullets, two_column, table, chart, summary, and sources layouts based on the content. Keep each slide readable, do not fabricate facts or numeric data, attach sourceUrls to factual slides, and include a sources slide when web research was used. The downloaded PPTX must remain editable in Microsoft PowerPoint.",
           });
         }
         // console.log("getAsTools", tools, funcs);
