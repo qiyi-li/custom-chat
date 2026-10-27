@@ -15,13 +15,26 @@ export async function POST(req: NextRequest) {
   const config = getServerSideConfig();
   try {
     const result = await webSearch(await req.json(), {
-      exaApiKey: config.exaApiKey,
-      tavilyApiKey: config.tavilyApiKey,
+      exaApiKeys: config.exaApiKeys,
+      tavilyApiKeys: config.tavilyApiKeys,
     });
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const status = message.includes("not configured") ? 503 : 400;
-    return NextResponse.json({ error: true, message }, { status });
+    const isPlanExhausted =
+      error instanceof Error && error.name === "SearchPlanExhaustedError";
+    const status = isPlanExhausted
+      ? 402
+      : message.includes("not configured")
+      ? 503
+      : 400;
+    return NextResponse.json(
+      {
+        error: true,
+        code: isPlanExhausted ? "SEARCH_PLAN_EXHAUSTED" : "SEARCH_FAILED",
+        message,
+      },
+      { status },
+    );
   }
 }

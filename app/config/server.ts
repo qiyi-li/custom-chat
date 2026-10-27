@@ -16,7 +16,9 @@ declare global {
       TARGET_BASE_URL?: string;
       OPENAI_ORG_ID?: string; // openai only
       TAVILY_API_KEY?: string;
+      TAVILY_API_KEY_1?: string;
       EXA_API_KEY?: string;
+      EXA_API_KEY_1?: string;
 
       VERCEL?: string;
       BUILD_MODE?: "standalone" | "export";
@@ -134,6 +136,17 @@ function getApiKey(keys?: string) {
   return apiKey;
 }
 
+function getApiKeys(...values: Array<string | undefined>) {
+  return Array.from(
+    new Set(
+      values
+        .flatMap((value) => value?.split(",") ?? [])
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
 export const getServerSideConfig = () => {
   if (typeof process === "undefined") {
     throw Error(
@@ -191,6 +204,11 @@ export const getServerSideConfig = () => {
     openaiOrgId: process.env.OPENAI_ORG_ID,
     tavilyApiKey: getApiKey(process.env.TAVILY_API_KEY),
     exaApiKey: getApiKey(process.env.EXA_API_KEY),
+    tavilyApiKeys: getApiKeys(
+      process.env.TAVILY_API_KEY,
+      process.env.TAVILY_API_KEY_1,
+    ),
+    exaApiKeys: getApiKeys(process.env.EXA_API_KEY, process.env.EXA_API_KEY_1),
 
     isStability,
     stabilityUrl: process.env.STABILITY_URL,

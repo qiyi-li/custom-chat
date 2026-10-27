@@ -1,5 +1,5 @@
 import type { FunctionToolItem } from "../store/plugin";
-import { WebSearchRequest, WebSearchResponse } from "./types";
+import { WebSearchRequest } from "./types";
 
 const MAX_SEARCHES_PER_TURN = 3;
 
@@ -86,7 +86,7 @@ export function createWebSearchFunction(headers: Record<string, string>) {
       },
       body: JSON.stringify(args),
     });
-    const data = (await response.json()) as WebSearchResponse;
+    const data = await response.json();
 
     return {
       status: response.status,

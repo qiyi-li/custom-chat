@@ -328,7 +328,7 @@ export class ChatGPTApi implements LLMApi {
           (requestPayload as RequestPayload).messages.unshift({
             role: "developer",
             content:
-              "Use web_search when the answer depends on current information, product research, competitor analysis, pricing, recent changes, or user feedback. Prefer Exa for product and user research, Tavily for recent news and quick fact checks. Always cite the source URLs returned by the tool and distinguish sourced facts from your analysis.",
+              "Use web_search when the answer depends on current information, product research, competitor analysis, pricing, recent changes, or user feedback. Prefer Exa for product and user research, Tavily for recent news and quick fact checks. Always cite the source URLs returned by the tool and distinguish sourced facts from your analysis. If the tool returns code SEARCH_PLAN_EXHAUSTED, clearly tell the user: 搜索套餐已用尽，请补充或更换搜索 API Key。 Do not invent search results or continue as if the search succeeded.",
           });
         }
         // console.log("getAsTools", tools, funcs);
